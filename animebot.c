@@ -259,8 +259,8 @@ int main() {
 				asprintf(&url_json, "%s%s%s", "https://2ch.hk/", board, "/catalog.json");
 				printf("url_json = %s\n", url_json);
 				FILE *fp_json;
-				fp_json = fopen("j.json", "w");
-				/* Пишет json доски в файл j.json */
+				fp_json = fopen("catalog.json", "w");
+				/* Пишет json доски в файл catalog.json */
 				if(curl_json){
 					CURLcode res;
 					curl_easy_setopt(curl_json, CURLOPT_URL, url_json);
@@ -274,7 +274,7 @@ int main() {
 				parser = json_parser_new ();
   
 				error = NULL;
-				json_parser_load_from_file (parser, "j.json", &error);
+				json_parser_load_from_file (parser, "catalog.json", &error);
 				json_root = json_parser_get_root(parser);
   
 				JsonObject *object;
@@ -317,8 +317,8 @@ int main() {
 			 
 				FILE *f;
 				char *p;
-				f = fopen("f.html", "w+");
-				/* Сохраняет тред в f.html */
+				f = fopen("thread.html", "w+");
+				/* Сохраняет тред в thread.html */
 				if(curl_f){
 					CURLcode res;
 					curl_easy_setopt(curl_f, CURLOPT_URL, url_html);

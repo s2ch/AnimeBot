@@ -1,5 +1,5 @@
 #AnimeBot#
-A very simple IRC bot written in C. Its primary purpose is posting .webm files on channels.
+A very simple IRC bot written in C. Its primary purpose is posting `.webm` files on channels.
 
 #Compiling#
 There are multiple ways to compile AnimeBot.
@@ -10,7 +10,7 @@ There are multiple ways to compile AnimeBot.
 4. Running `make clean` will remove the executable and only leave the code files.
 
 #How to Use#
-Type "!webm <board_name>" and enjoy.
+Type `!webm <board_name>` and enjoy.
 
 #The Config File#
 The program can be configured by editing the config.txt file. The file is in the `key = value` format. The settings are:

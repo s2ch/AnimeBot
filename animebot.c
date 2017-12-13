@@ -347,10 +347,11 @@ int main() {
 						while(*p != '"')
 							p++;
 						*p = '\0';
-						while(*ptr != '"')
-							ptr++;
-						++ptr;
-						asprintf(&webmsarray[i++], "%s%s", "https://2ch.hk", ptr); 
+						char *p_ptr = ptr;
+						while(*p_ptr != '"')
+							p_ptr++;
+						++p_ptr;
+						asprintf(&webmsarray[i++], "%s%s", "https://2ch.hk", p_ptr); 
 						webmcount++;
 						
 						/* без этого условия падало с ошибкой memory corruped */
@@ -367,7 +368,8 @@ int main() {
 					int random_webm = rand() % webmcount;
 					printf("webmsarray = %s\n", webmsarray[random_webm]); 
 					send_message(socket_desc, channel, webmsarray[random_webm]);
-				}
+				}else
+					send_message(socket_desc, channel, "Я ничего не нашла, прости сенпаи T_T");
 				
 				for(i = 0; i < webmcount; i++)
 					free(webmsarray[i]);

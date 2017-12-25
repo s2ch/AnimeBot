@@ -340,7 +340,7 @@ int main() {
 
 				/* ТУТ ПАДАЕТ */
 				/* парсит html, вебм урлы сохраняет в webmsarray */
-				while(getline(&ptr, &len, f) > 0){
+				while(getline(&ptr, &len, f) != -1){
 			    
 					if((p = strstr(ptr, ".webm")) != NULL &&
 					   strstr(ptr, "desktop") == NULL){

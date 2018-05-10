@@ -1,5 +1,13 @@
-compile:
-	gcc -o animebot animebot.c -g -std=gnu99 -fstack-protector-all -Wstack-protector --param ssp-buffer-size=4 -pie -fPIE -ftrapv -O2 -lcurl `pkg-config --cflags --libs json-glib-1.0` 
+SRCS = animebot.c
+OBJS = $(SRCS:.c=.o)
+CFLAGS = -g -O2 -std=gnu99 `pkg-config --cflags json-glib-1.0`
+LDFLAGS = -lcurl `pkg-config --libs json-glib-1.0`
+
+compile:$(OBJS)
+	gcc $(OBJS) $(CFLAGS) $(LDFLAGS)
+
+.c.o:
+	gcc $(CFLAGS) -c $< -o $@
 
 run:
 	make compile

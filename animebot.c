@@ -179,10 +179,30 @@ void send_message(int sock, char to[], char message[]){
 	send(sock, message_packet, strlen(message_packet), 0);
 }
 
-/* size_t write_data(char *data, size_t size, size_t nmemb, char *buffer){ */
-/* 	strcpy(buffer, data); */
-/* 	return	size * nmemb; */
-/* } */
+struct MemoryStruct {
+  char *memory;
+  size_t size;
+};
+
+static size_t
+WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+  size_t realsize = size * nmemb;
+  struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+  
+  mem->memory = realloc(mem->memory, mem->size + realsize + 1);
+  if(mem->memory == NULL) {
+    /* out of memory! */
+    printf("not enough memory (realloc returned NULL)\n");
+    return 0;
+  }
+
+  memcpy(&(mem->memory[mem->size]), contents, realsize);
+  mem->size += realsize;
+  mem->memory[mem->size] = 0;
+
+  return realsize;
+}
 
 int main() {
 	int socket_desc = socket(AF_INET, SOCK_STREAM, 0);
@@ -224,6 +244,12 @@ int main() {
 	regmatch_t *pmatch;
 	regcomp(&webm, r_webm, REG_ICASE | REG_EXTENDED);
 
+	struct MemoryStruct chunk;
+	CURL *curl = curl_easy_init();
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:57.0) Gecko/20100101 Firefox/57.0");
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+	
 	while (1){
 		char line[512];
 		read_line(socket_desc, line);
@@ -232,6 +258,9 @@ int main() {
 		char *command = get_command(line);
 		char *argument = get_last_argument(line);
 
+		chunk.memory = malloc(1);
+		chunk.size = 0;
+		
 		if (strcmp(command, "PING") == 0)
 			send_pong(socket_desc, argument); 
 		else if (strcmp(command, "PRIVMSG") == 0){
@@ -239,11 +268,9 @@ int main() {
 
 			/* Поиск WEBM  */
 			if(regexec(&webm, argument, nmatch, pmatch, 0) == 0){
-				CURL *curl_f = curl_easy_init();
-				CURL *curl_json = curl_easy_init();
 				JsonParser *parser;
 				JsonNode *json_root;
-				GError *error;
+				GError *error = NULL;
 				int i = 0;
 				char *ar = argument;
 				while(*ar != ' ')
@@ -255,32 +282,31 @@ int main() {
 				board[i] = '\0';
 				printf("board = %s\n", board);
 
-				char *url_json;
-				asprintf(&url_json, "%s%s%s", "https://2ch.hk/", board, "/catalog.json");
-				printf("url_json = %s\n", url_json);
-				FILE *fp_json;
-				fp_json = fopen("catalog.json", "w");
-				/* Пишет json доски в файл catalog.json */
-				if(curl_json){
-					CURLcode res;
-					curl_easy_setopt(curl_json, CURLOPT_URL, url_json);
-					curl_easy_setopt(curl_json, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:57.0) Gecko/20100101 Firefox/57.0");
-					curl_easy_setopt(curl_json, CURLOPT_WRITEFUNCTION, NULL);
-					curl_easy_setopt(curl_json, CURLOPT_WRITEDATA, fp_json);
-					res = curl_easy_perform(curl_json);
-  
-				}
-				fclose(fp_json);
+				char *url;
+				asprintf(&url,
+						 "%s%s%s",
+						 "https://2ch.hk/",
+						 board,
+						 "/catalog.json");
+				
+				printf("url_json = %s\n", url);
+				
+				curl_easy_setopt(curl, CURLOPT_URL, url); 
+				curl_easy_perform(curl);
+
 				parser = json_parser_new ();
-  
-				error = NULL;
-				json_parser_load_from_file (parser, "catalog.json", &error);
+
+				json_parser_load_from_data(parser,
+										   chunk.memory,
+										   strlen(chunk.memory),
+										   &error);
 				json_root = json_parser_get_root(parser);
   
 				JsonObject *object;
 				JsonArray *array_member;
 				object = json_node_get_object(json_root); 
-				array_member = json_object_get_array_member(object, "threads");
+				array_member = json_object_get_array_member(object,
+															"threads");
   
 				JsonNode *node;
 				JsonObject *obj;
@@ -288,7 +314,7 @@ int main() {
 				JsonObject *obj_files;
 				char thread[12];
 				JsonArray *array_files;
-				/* Парсит json, номер треда помещает в thread, если не находит, то ???*/
+				/* Парсит json, номер треда помещает в thread */
 				for(i = 0; i < json_array_get_length(array_member); i++){
 					node = json_array_get_element(array_member, i);
 					obj = json_node_get_object(node);
@@ -298,67 +324,45 @@ int main() {
 					if(strcasestr(json_object_get_string_member(obj_files, "name"), "webm")){
 						strcpy(thread, json_object_get_string_member(obj, "num"));
 						break;
-					}
-			    
-			      
+					} 
 				}
 			  
-				g_object_unref (parser);
-				/* json_array_unref(array_member); */
-				/* json_object_unref(object); */
-				/* json_object_unref(obj); */
-				/* json_node_free(json_root); */
-				/* json_node_free(node); */
-  
-				//char url_html[] = "https://2ch.hk/a/res/4099203.html";
-				char *url_html;
-				asprintf(&url_html, "%s%s%s%s%s", "https://2ch.hk/", board, "/res/", thread, ".html");
-				printf("url_html = %s\n", url_html);
-			 
-				FILE *f;
-				char *p;
-				f = fopen("thread.html", "w+");
-				/* Сохраняет тред в thread.html */
-				if(curl_f){
-					CURLcode res;
-					curl_easy_setopt(curl_f, CURLOPT_URL, url_html);
-					curl_easy_setopt(curl_f, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:57.0) Gecko/20100101 Firefox/57.0");
-					curl_easy_setopt(curl_f, CURLOPT_WRITEFUNCTION, NULL);
-					curl_easy_setopt(curl_f, CURLOPT_WRITEDATA, f);
-					res = curl_easy_perform(curl_f);
-			    
-				}
-			  
-				rewind(f);
+				g_object_unref (parser); 
+				
+				asprintf(&url,
+						 "%s%s%s%s%s",
+						 "https://2ch.hk/",
+						 board,
+						 "/res/",
+						 thread,
+						 ".html");
+				
+				printf("url_html = %s\n", url);
 
-				char *ptr = NULL;
-				size_t len = 0;
+				curl_easy_setopt(curl, CURLOPT_URL, url); 
+				curl_easy_perform(curl);
 
-				char **webmsarray = malloc(512);
+				char **webmsarray = malloc(sizeof(char **));
 				i = 0;
 				int webmcount = 0;
 
-				/* ТУТ ПАДАЕТ */
-				/* парсит html, вебм урлы сохраняет в webmsarray */
-				while(getline(&ptr, &len, f) != -1){
-			    
-					if((p = strstr(ptr, ".webm")) != NULL &&
-					   strstr(ptr, "desktop") == NULL){
+				/* парсит html, вебм урлы сохраняет в webmsarray */ 
+			    char *p = chunk.memory;
+					while((p = strstr(p, ".webm\""))){
+						char *p_ptr = p;
+						while(*p_ptr != '"')
+							p_ptr--;
+						++p_ptr;
 						while(*p != '"')
 							p++;
-						*p = '\0';
-						char *p_ptr = ptr;
-						while(*p_ptr != '"')
-							p_ptr++;
-						++p_ptr;
-						asprintf(&webmsarray[i++], "%s%s", "https://2ch.hk", p_ptr); 
-						webmcount++;
-						
-						/* без этого условия падало с ошибкой memory corruped */
-						if(webmcount > 50)
-							break; 
+						*p = '\0'; 
+						if(strstr(p_ptr, "/src/")){
+							webmsarray = realloc(webmsarray, sizeof(char *) * (i+1));
+							asprintf(&webmsarray[i++], "%s%s", "https://2ch.hk", p_ptr); 
+							webmcount++;
+						}
+						p++; 
 					} 
-				}
 			  
 				printf("webmcount = %d\n", webmcount);
 
@@ -373,15 +377,13 @@ int main() {
 				
 				for(i = 0; i < webmcount; i++)
 					free(webmsarray[i]);
-				free(webmsarray);
-				fclose(f);
-				free(url_json);
-				free(url_html);
-				curl_easy_cleanup(curl_json);
-				curl_easy_cleanup(curl_f); 
+					
+				free(webmsarray); 
+				free(url); 
 			}
 			
 			free(channel);
+			free(chunk.memory);
 		}
 
 		free(prefix);
@@ -390,5 +392,6 @@ int main() {
 		free(argument);
 	}
 	regfree(&webm);
+	curl_easy_cleanup(curl);
 
 }

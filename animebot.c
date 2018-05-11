@@ -283,11 +283,7 @@ int main() {
 				printf("board = %s\n", board);
 
 				char *url;
-				asprintf(&url,
-						 "%s%s%s",
-						 "https://2ch.hk/",
-						 board,
-						 "/catalog.json");
+				asprintf(&url, "%s%s%s", "https://2ch.hk/", board, "/catalog.json");
 				
 				printf("url_json = %s\n", url);
 				
@@ -305,8 +301,7 @@ int main() {
 				JsonObject *object;
 				JsonArray *array_member;
 				object = json_node_get_object(json_root); 
-				array_member = json_object_get_array_member(object,
-															"threads");
+				array_member = json_object_get_array_member(object, "threads");
   
 				JsonNode *node;
 				JsonObject *obj;
@@ -329,13 +324,7 @@ int main() {
 			  
 				g_object_unref (parser); 
 				
-				asprintf(&url,
-						 "%s%s%s%s%s",
-						 "https://2ch.hk/",
-						 board,
-						 "/res/",
-						 thread,
-						 ".html");
+				asprintf(&url, "%s%s%s%s%s", "https://2ch.hk/", board, "/res/", thread, ".html");
 				
 				printf("url_html = %s\n", url);
 
@@ -348,21 +337,21 @@ int main() {
 
 				/* парсит html, вебм урлы сохраняет в webmsarray */ 
 			    char *p = chunk.memory;
-					while((p = strstr(p, ".webm\""))){
-						char *p_ptr = p;
-						while(*p_ptr != '"')
-							p_ptr--;
-						++p_ptr;
-						while(*p != '"')
-							p++;
-						*p = '\0'; 
-						if(strstr(p_ptr, "/src/")){
-							webmsarray = realloc(webmsarray, sizeof(char *) * (i+1));
-							asprintf(&webmsarray[i++], "%s%s", "https://2ch.hk", p_ptr); 
-							webmcount++;
-						}
-						p++; 
-					} 
+				while((p = strstr(p, ".webm\""))){
+					char *p_ptr = p;
+					while(*p_ptr != '"')
+						p_ptr--;
+					++p_ptr;
+					while(*p != '"')
+						p++;
+					*p = '\0'; 
+					if(strstr(p_ptr, "/src/")){
+						webmsarray = realloc(webmsarray, sizeof(char *) * (i+1));
+						asprintf(&webmsarray[i++], "%s%s", "https://2ch.hk", p_ptr); 
+						webmcount++;
+					}
+					p++; 
+				}
 			  
 				printf("webmcount = %d\n", webmcount);
 

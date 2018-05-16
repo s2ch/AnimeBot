@@ -129,7 +129,7 @@ char *get_argument(char line[], int argno){
 	char *argument = malloc(512);
 	char clone[512];
 	strncpy(clone, line, strlen(line)+1);
-	
+
 	int current_arg = 0;
 	char *splitted = strtok(clone, " ");
 	while (splitted != NULL){
@@ -142,7 +142,7 @@ char *get_argument(char line[], int argno){
 		}
 		splitted = strtok(NULL, " ");
 	}
-	
+
 	if (current_arg != argno){
 		argument[0] = '\0';
 	}
@@ -179,29 +179,28 @@ void send_message(int sock, char to[], char message[]){
 	send(sock, message_packet, strlen(message_packet), 0);
 }
 
-struct MemoryStruct {
-  char *memory;
-  size_t size;
+struct MemoryStruct{
+	char *memory;
+	size_t size;
 };
 
 static size_t
-WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
-{
-  size_t realsize = size * nmemb;
-  struct MemoryStruct *mem = (struct MemoryStruct *)userp;
-  
-  mem->memory = realloc(mem->memory, mem->size + realsize + 1);
-  if(mem->memory == NULL) {
-    /* out of memory! */
-    printf("not enough memory (realloc returned NULL)\n");
-    return 0;
-  }
+WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp){
+	size_t realsize = size * nmemb;
+	struct MemoryStruct *mem = (struct MemoryStruct *)userp;
 
-  memcpy(&(mem->memory[mem->size]), contents, realsize);
-  mem->size += realsize;
-  mem->memory[mem->size] = 0;
+	mem->memory = realloc(mem->memory, mem->size + realsize + 1);
+	if(mem->memory == NULL) {
+		/* out of memory! */
+		printf("not enough memory (realloc returned NULL)\n");
+		return 0;
+	}
 
-  return realsize;
+	memcpy(&(mem->memory[mem->size]), contents, realsize);
+	mem->size += realsize;
+	mem->memory[mem->size] = 0;
+
+	return realsize;
 }
 
 int main() {
@@ -210,7 +209,7 @@ int main() {
 		perror("Could not create socket");
 		exit(1);
 	}
-	
+
 	char *ip = get_config("server");
 	char *port = get_config("port");
 
@@ -227,7 +226,7 @@ int main() {
 		perror("Could not connect");
 		exit(1);
 	}
-	
+
 	char *nick = get_config("nick");
 	char *channels = get_config("channels");
 
@@ -249,7 +248,7 @@ int main() {
 	curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:57.0) Gecko/20100101 Firefox/57.0");
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
-	
+
 	while (1){
 		char line[512];
 		read_line(socket_desc, line);
@@ -260,9 +259,9 @@ int main() {
 
 		chunk.memory = malloc(1);
 		chunk.size = 0;
-		
+
 		if (strcmp(command, "PING") == 0)
-			send_pong(socket_desc, argument); 
+			send_pong(socket_desc, argument);
 		else if (strcmp(command, "PRIVMSG") == 0){
 			char *channel = get_argument(line, 1);
 
@@ -283,26 +282,23 @@ int main() {
 				printf("board = %s\n", board);
 
 				char *url;
-				asprintf(&url, "%s%s%s", "https://2ch.hk/", board, "/catalog.json");
-				
+				asprintf(&url, "https://2ch.hk/%s/catalog.json", board);
+
 				printf("url_json = %s\n", url);
-				
-				curl_easy_setopt(curl, CURLOPT_URL, url); 
+
+				curl_easy_setopt(curl, CURLOPT_URL, url);
 				curl_easy_perform(curl);
 
 				parser = json_parser_new ();
 
-				json_parser_load_from_data(parser,
-										   chunk.memory,
-										   strlen(chunk.memory),
-										   &error);
+				json_parser_load_from_data(parser, chunk.memory, strlen(chunk.memory), &error);
 				json_root = json_parser_get_root(parser);
-  
+
 				JsonObject *object;
 				JsonArray *array_member;
-				object = json_node_get_object(json_root); 
+				object = json_node_get_object(json_root);
 				array_member = json_object_get_array_member(object, "threads");
-  
+
 				JsonNode *node;
 				JsonObject *obj;
 				JsonNode *node_files;
@@ -319,23 +315,23 @@ int main() {
 					if(strcasestr(json_object_get_string_member(obj_files, "name"), "webm")){
 						strcpy(thread, json_object_get_string_member(obj, "num"));
 						break;
-					} 
+					}
 				}
 			  
-				g_object_unref (parser); 
+				g_object_unref (parser);
 				
-				asprintf(&url, "%s%s%s%s%s", "https://2ch.hk/", board, "/res/", thread, ".html");
+				asprintf(&url, "https://2ch.hk/%s/res/%s.html", board, thread);
 				
 				printf("url_html = %s\n", url);
 
-				curl_easy_setopt(curl, CURLOPT_URL, url); 
+				curl_easy_setopt(curl, CURLOPT_URL, url);
 				curl_easy_perform(curl);
 
 				char **webmsarray = malloc(sizeof(char **));
 				i = 0;
 				int webmcount = 0;
 
-				/* парсит html, вебм урлы сохраняет в webmsarray */ 
+				/* парсит html, вебм урлы сохраняет в webmsarray */
 			    char *p = chunk.memory;
 				while((p = strstr(p, ".webm\""))){
 					char *p_ptr = p;
@@ -344,13 +340,13 @@ int main() {
 					++p_ptr;
 					while(*p != '"')
 						p++;
-					*p = '\0'; 
+					*p = '\0';
 					if(strstr(p_ptr, "/src/")){
 						webmsarray = realloc(webmsarray, sizeof(char *) * (i+1));
-						asprintf(&webmsarray[i++], "%s%s", "https://2ch.hk", p_ptr); 
+						asprintf(&webmsarray[i++], "https://2ch.hk%s", p_ptr);
 						webmcount++;
 					}
-					p++; 
+					p++;
 				}
 			  
 				printf("webmcount = %d\n", webmcount);
@@ -359,16 +355,18 @@ int main() {
 				if(webmcount > 0){
 					srand(time(NULL));
 					int random_webm = rand() % webmcount;
-					printf("webmsarray = %s\n", webmsarray[random_webm]); 
-					send_message(socket_desc, channel, webmsarray[random_webm]);
+					printf("webmsarray = %s\n", webmsarray[random_webm]);
+					char res[512];
+					sprintf(res, "%s [%d found]", webmsarray[random_webm], webmcount);
+					send_message(socket_desc, channel, res);
 				}else
 					send_message(socket_desc, channel, "Я ничего не нашла, прости сенпаи T_T");
 				
 				for(i = 0; i < webmcount; i++)
 					free(webmsarray[i]);
 					
-				free(webmsarray); 
-				free(url); 
+				free(webmsarray);
+				free(url);
 			}
 			
 			free(channel);

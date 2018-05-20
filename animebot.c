@@ -244,6 +244,8 @@ int main() {
 	regcomp(&webm, r_webm, REG_ICASE | REG_EXTENDED);
 
 	struct MemoryStruct chunk;
+	chunk.memory = malloc(1);
+	
 	CURL *curl = curl_easy_init();
 	curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:57.0) Gecko/20100101 Firefox/57.0");
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
@@ -257,7 +259,6 @@ int main() {
 		char *command = get_command(line);
 		char *argument = get_last_argument(line);
 
-		chunk.memory = malloc(1);
 		chunk.size = 0;
 
 		if (strcmp(command, "PING") == 0)
@@ -369,8 +370,7 @@ int main() {
 				free(url);
 			}
 			
-			free(channel);
-			free(chunk.memory);
+			free(channel); 
 		}
 
 		free(prefix);
@@ -379,6 +379,7 @@ int main() {
 		free(argument);
 	}
 	regfree(&webm);
+	free(chunk.memory);
 	curl_easy_cleanup(curl);
 
 }
